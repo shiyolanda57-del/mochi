@@ -9078,9 +9078,9 @@ transition-duration: .01ms !important;
     <!-- v3.8.y：底部统一装进一个卡片框（版本/加载/提示/按钮成一整体，与顶部品牌卡片呼应） -->
     <div class="splash-footcard">
       <!-- v3.8.y：底部版本块——两行：名称+版本 / 部署时间+实时秒数（实时秒写入 #splash-ver-live） -->
-      <div class="splash-ver" id="splash-ver" data-build-ts="1789097288858">
-        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.558</b></span>
-        <span class="sv-deploy">部署于 2026-09-11 11:28<span id="splash-ver-live"></span></span>
+      <div class="splash-ver" id="splash-ver" data-build-ts="1789098699229">
+        <span class="sv-app">Mochi 字卡传讯 <b>v3.26.1</b></span>
+        <span class="sv-deploy">部署于 2026-09-11 03:51<span id="splash-ver-live"></span></span>
       </div>
       <!-- v3.5.120：数据（IndexedDB 回填）加载完成前不显示「点击进入」按钮，
            只显示加载提示；就绪后按钮才出现（clock.js 控制显隐） -->
@@ -10260,7 +10260,7 @@ transition-duration: .01ms !important;
           <div class="txt">清除本地数据</div>
         </div>
       </div>
-      <div class="ver">Mochi 字卡传讯 v3.26.558</div>
+      <div class="ver">Mochi 字卡传讯 v3.26.1</div>
       <div class="ver-credit">原版小红书@言序（1842523578）</div>
       <!-- v3.27.x：设置页底部防骗声明 -->
       <div class="set-alert">
@@ -10555,7 +10555,7 @@ transition-duration: .01ms !important;
             <div class="lic-hero-top">
               <div class="lic-title">Mochi 字卡传讯</div>
               <span class="lic-badge">原版</span>
-              <span class="lic-ver">v3.26.558</span>
+              <span class="lic-ver">v3.26.1</span>
             </div>
             <div class="lic-p">原创极简风情侣聊天模拟器：黑白灰简约设计，数据全部保存在本地、无需联网；所有内容均为代码触发、按概率运行，联系方可主动发送聊天消息。代码从零编写并完全开源——本作即原版。</div>
             <div class="lic-pills">
@@ -88112,6 +88112,218 @@ lastHeal: his
 };
 })();
 } catch (__e) { try { console.error("[JS] mobile-adapt.js", __e && __e.message || __e); } catch (x) {} if (window.__jsErrors) window.__jsErrors.push(String(__e && __e.message || __e)); } })();
+(function () { try {
+(function () {
+const STORE_KEY = 'user-global-css';
+const FALLBACK_KEY = 'xy-home-v2:user-global-css';
+let gStore = null;
+try {
+if (window.xyStore) {
+gStore = window.xyStore('xy-home-v2');
+}
+} catch (e) {}
+function getCss() {
+try {
+if (gStore) return gStore.get(STORE_KEY) || '';
+} catch (e) {}
+try {
+return localStorage.getItem(FALLBACK_KEY) || '';
+} catch (e) {}
+return '';
+}
+function saveCss(css) {
+try {
+if (gStore) {
+gStore.set(STORE_KEY, css);
+return;
+}
+} catch (e) {}
+try {
+localStorage.setItem(FALLBACK_KEY, css);
+} catch (e) {}
+}
+function clearCss() {
+try {
+if (gStore) gStore.remove(STORE_KEY);
+} catch (e) {}
+try {
+localStorage.removeItem(FALLBACK_KEY);
+} catch (e) {}
+}
+function toast(msg) {
+try {
+if (window.toast) {
+window.toast(msg);
+return;
+}
+} catch (e) {}
+console.log(msg);
+}
+function ensureStyle() {
+let style = document.getElementById('user-global-css-style');
+if (!style) {
+style = document.createElement('style');
+style.id = 'user-global-css-style';
+document.head.appendChild(style);
+}
+return style;
+}
+function applyCss(css) {
+const style = ensureStyle();
+style.textContent = css || '';
+}
+applyCss(getCss());
+function mountEditor() {
+const page = document.getElementById('page-theme');
+if (!page) return;
+/*
+* 保留原来的返回栏。
+* 颜色 / 尺寸 / 背景 / 图标 / 方案等原 UI 全部从 DOM 移除。
+* personalize.js 本身仍保留，避免误伤别的功能。
+*/
+const head = page.querySelector('.chat-head');
+Array.from(page.children).forEach(function (child) {
+if (child !== head) child.remove();
+});
+const title = head && head.querySelector('.ch-name');
+if (title) title.textContent = '自定义 CSS';
+const appearanceRow = document.getElementById('row-appearance');
+if (appearanceRow) {
+const txt = appearanceRow.querySelector('.txt');
+if (txt) {
+txt.innerHTML =
+'自定义 CSS' +
+'<span class="sub">粘贴代码，一键修改整个界面</span>';
+}
+}
+const editorStyle = document.createElement('style');
+editorStyle.id = 'custom-css-editor-style';
+editorStyle.textContent = `
+#custom-css-shell {
+box-sizing: border-box;
+width: 100%;
+height: calc(100% - 58px);
+padding: 14px;
+display: flex;
+flex-direction: column;
+gap: 10px;
+background: #f7f7f8;
+}
+#custom-css-shell * {
+box-sizing: border-box;
+}
+#custom-css-help {
+flex: 0 0 auto;
+padding: 12px 14px;
+border: 1px solid #e5e7eb;
+border-radius: 14px;
+background: #fff;
+color: #6b7280;
+font-size: 12px;
+line-height: 1.6;
+}
+#global-css-input {
+width: 100%;
+flex: 1 1 auto;
+min-height: 320px;
+resize: none;
+padding: 14px;
+border: 1px solid #dfe3e8;
+border-radius: 14px;
+outline: none;
+background: #fff;
+color: #111;
+font-family:
+"SFMono-Regular",
+Consolas,
+"Liberation Mono",
+monospace;
+font-size: 12px;
+line-height: 1.65;
+white-space: pre;
+overflow: auto;
+}
+#global-css-input:focus {
+border-color: #111;
+}
+.custom-css-actions {
+flex: 0 0 auto;
+display: flex;
+gap: 8px;
+}
+.custom-css-btn {
+min-height: 42px;
+border: none;
+border-radius: 999px;
+padding: 0 18px;
+font-size: 14px;
+font-weight: 650;
+cursor: pointer;
+}
+#global-css-apply {
+flex: 1;
+background: #111;
+color: #fff;
+}
+#global-css-clear {
+background: #e9e9eb;
+color: #111;
+}
+`;
+document.head.appendChild(editorStyle);
+const shell = document.createElement('div');
+shell.id = 'custom-css-shell';
+shell.innerHTML = `
+<div id="custom-css-help">
+这里的 CSS 会作用于整个 Mochi。<br>
+聊天气泡、朋友圈、桌面、设置页都可以一起修改。
+保存后刷新仍然生效。
+</div>
+<textarea
+id="global-css-input"
+spellcheck="false"
+autocapitalize="off"
+autocomplete="off"
+placeholder="把 CSS 粘贴到这里…"
+></textarea>
+<div class="custom-css-actions">
+<button
+type="button"
+class="custom-css-btn"
+id="global-css-clear"
+>清空</button>
+<button
+type="button"
+class="custom-css-btn"
+id="global-css-apply"
+>保存并应用</button>
+</div>
+`;
+page.appendChild(shell);
+const input = document.getElementById('global-css-input');
+const applyBtn = document.getElementById('global-css-apply');
+const clearBtn = document.getElementById('global-css-clear');
+input.value = getCss();
+applyBtn.addEventListener('click', function () {
+const css = input.value || '';
+saveCss(css);
+applyCss(css);
+toast('CSS 已保存并应用');
+});
+clearBtn.addEventListener('click', function () {
+clearCss();
+input.value = '';
+applyCss('');
+toast('已恢复原始样式');
+});
+}
+if (document.readyState === 'loading') {
+document.addEventListener('DOMContentLoaded', mountEditor);
+} else {
+mountEditor();
+}
+})();
+} catch (__e) { try { console.error("[JS] custom-css.js", __e && __e.message || __e); } catch (x) {} if (window.__jsErrors) window.__jsErrors.push(String(__e && __e.message || __e)); } })();
   </script>
 
   <!-- PWA 安装到桌面按钮（Chrome/Edge 触发 beforeinstallprompt 时显示） -->
@@ -88133,4 +88345,4 @@ lastHeal: his
 <!-- __MOCHI_EOF__ -->
 </body>
 </html>
-<!-- __MOCHI_EOF__ mtwebz4q -->
+<!-- __MOCHI_EOF__ mtwf67dp -->
