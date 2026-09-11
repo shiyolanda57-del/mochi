@@ -6646,7 +6646,7 @@ let activeSide = 'in';    // 当前操作消息方向
 let lastQuote = null;     // 待引用内容
 function getFav() { try { return JSON.parse(store.get('fav-msgs') || '[]'); } catch (e) { return []; } }
 function saveFav(list) { store.set('fav-msgs', JSON.stringify(list)); try { scheduleFavImgPass(2500); } catch (e) {} }
-// v3.31.x #310 批量管理勾选身份：收藏无稳定 id，用「归属+类型+内容+时间戳」指纹做 key
+// v3.31.x #314 批量管理勾选身份：收藏无稳定 id，用「归属+类型+内容+时间戳」指纹做 key
 // （与 favDup 判重同源）——getFav() 每次返回新解析的全新对象，按对象引用勾选会在
 // renderFav 重渲染（点全选/切分类/切页签都触发）后全部失配，勾选静默清零＝多选失效
 //（全机型复现，与设备无关）。key 里不含大载荷（text/parts 截断），只作会话内身份比对。
@@ -7153,7 +7153,7 @@ const favList = document.getElementById('fav-list');
 let favTab = 'mine'; // mine=我的收藏 ta=联系人的收藏
 let favKind = 'all'; // 收藏分类筛选：all=全部 msg=聊天消息 card=互动卡片 mail=信件 feed=朋友圈
 let favBatch = false;   // v3.31.x 批量管理模式（多选删除）
-let favBatchSel = [];   // #310 批量模式选中的 favItemKey 指纹（跨重渲染稳定，不再存对象引用）
+let favBatchSel = [];   // #314 批量模式选中的 favItemKey 指纹（跨重渲染稳定，不再存对象引用）
 let favBatchArr = null; // 当次渲染使用的收藏数组引用（批量删除直接改它，避免重复 getFav 解析导致引用失效）
 let favBatchVis = [];   // 当前 tab+分类筛选下可见条目（全选用）
 const FAV_KINDS = [
@@ -7200,7 +7200,7 @@ if (cnt) cnt.textContent = n > 0 ? String(n) : '';
 const list2 = favKind === 'all' ? list : list.filter(f => (f.kind || 'msg') === favKind);
 list2.sort((a, b) => (b.ts || 0) - (a.ts || 0));
 // v3.31.x 批量管理：记录本次渲染的数组与可见条目；勾选只保留当前筛选下仍可见的（切 tab/分类自动收窄）
-// #310：勾选身份是 favItemKey 指纹而非对象引用——getFav() 每次 JSON.parse 生成全新对象，
+// #314：勾选身份是 favItemKey 指纹而非对象引用——getFav() 每次 JSON.parse 生成全新对象，
 // 按引用过滤在每次重渲染后必然全部失配（点全选/切分类/切页签即触发），勾选静默清零。
 favBatchArr = fav;
 favBatchVis = list2;
@@ -7342,7 +7342,7 @@ return (x.kind || 'msg') === kind &&
 // v3.31.x 批量管理：条目变多选——外侧加圆圈勾选，点击整条切换勾选；
 // 用捕获阶段监听，抢先于气泡内图片的 click（查看大图）并 stopPropagation 拦下
 if (favBatch) {
-const fk = favItemKey(f); // #310 勾选身份=指纹 key（对象引用跨重渲染必失配）
+const fk = favItemKey(f); // #314 勾选身份=指纹 key（对象引用跨重渲染必失配）
 const ck = document.createElement('div');
 ck.className = 'fav-check' + (favBatchSel.indexOf(fk) >= 0 ? ' on' : '');
 ck.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg>';
@@ -7433,7 +7433,7 @@ if (favBatchAll) {
 favBatchAll.addEventListener('click', () => {
 if (!favBatch) return;
 const all = favBatchVis.length && favBatchSel.length === favBatchVis.length;
-favBatchSel = all ? [] : favBatchVis.map(favItemKey); // #310 存指纹 key，不存对象引用
+favBatchSel = all ? [] : favBatchVis.map(favItemKey); // #314 存指纹 key，不存对象引用
 renderFav();
 });
 }
@@ -7444,7 +7444,7 @@ if (!favBatch || !favBatchSel.length) return;
 const n = favBatchSel.length;
 if (!window.openModal) return;
 window.openModal('删除选中的 ' + n + ' 条收藏？', '', () => {
-// #310 按指纹 key 匹配删除——对象引用在确认弹窗打开期间经 getFav 重排必然失配
+// #314 按指纹 key 匹配删除——对象引用在确认弹窗打开期间经 getFav 重排必然失配
 const selKeys = new Set(favBatchSel);
 if (favBatchArr) {
 for (let i = favBatchArr.length - 1; i >= 0; i--) {

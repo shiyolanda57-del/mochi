@@ -69,7 +69,8 @@
       { n: '五子棋', d: '11×11 迷你盘三档难度，TA 会堵你的成五点', k: '五子棋 棋 游戏', go: ['.app[data-app="chat"]', '#more-gomoku'] },
       { n: '连连看', d: '合作消除同款图案，连线不超两个弯', k: '连连看 游戏', go: ['.app[data-app="chat"]', '#more-linkup'] },
       { n: '消消乐', d: '轮流交换凑三连，连锁连消冲目标分', k: '消消乐 三消 游戏', go: ['.app[data-app="chat"]', '#more-match3'] },
-      { n: '心意币拍卖会', d: '与 TA 轮番举牌，落槌价真实扣款', k: '拍卖 拍卖会 心意币', go: ['.app[data-app="chat"]', '#more-auction'] }
+      { n: '心意币拍卖会', d: '与 TA 轮番举牌，落槌价真实扣款', k: '拍卖 拍卖会 心意币', go: ['.app[data-app="chat"]', '#more-auction'] },
+      { n: '游乐室', d: '小游戏战绩、徽章、摆件图鉴一览', k: '游乐室 战绩 徽章 摆件 图鉴', go: ['.app[data-app="chat"]', '#more-arcade'] }
     ] },
     { g: '手机桌面与工具', items: [
       { n: '桌面装修模式', d: '编辑布局/添加卡片/换图标/拖拽跨页', k: '装修 编辑 布局 图标 桌面', go: ['#row-custom-icon'] },
@@ -94,7 +95,8 @@
       { n: '朋友圈', d: '发动态/点赞评论/TA 也会发', k: '朋友圈 动态 点评 转发', go: ['.app[data-app="feed"]'] },
       { n: '音乐', d: '本地/链接上传、歌单、一起听歌、播放队列', k: '音乐 歌曲 播放 歌单', go: ['.app[data-app="music"]'] },
       { n: '梦角档案', d: '认识 TA：九个分区 + 发现卡片 + 共同记录', k: '梦角档案 档案 认识', go: ['.app[data-app="memo-arc"]'] },
-      { n: '我的档案', d: '写给 TA 的自我说明与 IF 世界设定', k: '我的档案 自我 if 世界', go: ['.app[data-app="my-arc"]'] }
+      { n: '我的档案', d: '写给 TA 的自我说明与 IF 世界设定', k: '我的档案 自我 if 世界', go: ['.app[data-app="my-arc"]'] },
+      { n: '心情日记', d: '每天记心情，月度曲线对照、TA 的关心', k: '心情日记 心情 情绪 日记', go: ['.app[data-app="chat"]', '#more-mood'] }
     ] },
     { g: '系统与设置', items: [
       { n: '音效设置', d: '来电铃声/消息音效本地上传', k: '音效 铃声 声音 提示音', go: ['#row-sfx-settings'] },
@@ -103,9 +105,17 @@
       { n: '数据导入', d: '从备份文件恢复，含预览与进度', k: '导入 恢复 数据', go: ['#row-import'] },
       { n: '查看存储占用', d: '按功能看本地存储占用，可清诊断记录', k: '存储 占用 空间 清理', go: ['#row-storage-view'] },
       { n: '应用锁', d: '数字密码锁，防别人偷看聊天记录', k: '应用锁 密码 隐私 锁', where: '设置页「应用锁」分组' },
+      { n: '设备兼容诊断', d: '一键复制本机环境信息发给开发者排查', k: '诊断 兼容 环境 报障', go: ['#row-diagnostics'] },
+      { n: '屏幕适配诊断', d: '顶部空白/底部裁切/缩放异常一键定位', k: '屏幕 适配 诊断 顶部空白 裁切', go: ['#row-screen-diag'] },
+      { n: '功能诊断', d: '逐个测试全部功能是否正常（约15秒）', k: '功能诊断 自检 测试', go: ['#row-func-diag'] },
       { n: '功能介绍与许可', d: '原创声明、二传二改许可、灵感来源', k: '介绍 许可 关于 版权', go: ['#row-about'] }
     ] }
   ];
+
+  // ---- 顶部分类 tab 样式（自包含注入，不动 base.css；深色模式走全局配色变量） ----
+  const hubStyle = document.createElement('style');
+  hubStyle.textContent = '.fhub-tabs{display:flex;gap:8px;overflow-x:auto;padding:2px 14px 8px;-webkit-overflow-scrolling:touch;scrollbar-width:none}.fhub-tabs::-webkit-scrollbar{display:none}.fhub-tag{flex:0 0 auto;padding:6px 13px;border-radius:20px;font-size:12px;color:var(--muted,#666);background:rgba(0,0,0,.055);white-space:nowrap;cursor:pointer;transition:background .15s,color .15s;-webkit-tap-highlight-color:transparent}.fhub-tag:active{transform:scale(.97)}.fhub-tag.on{color:#fff;background:#111}';
+  document.head.appendChild(hubStyle);
 
   // ---- 渲染 ----
   const body = document.getElementById('fhub-body');
@@ -134,10 +144,34 @@
     return wrap;
   }
 
-  // 默认按组展示（第一组展开其余收起？——分组不多，全部平铺更直观，收起交给搜索）
+  // 默认按组全部平铺；顶部分类 tag 点击只显示对应组
   let groups = [];
   HUB.forEach((grp, gi) => { grp.items.forEach(it => { it._g = gi; }); groups.push(groupBlock(grp, gi, true)); });
   groups.forEach(el => body.appendChild(el));
+
+  // ---- 顶部分类切换：全部 / 聊天传讯 / 字卡库 / … ----
+  const tags = document.getElementById('fhub-tags');
+  let activeGi = -1; // -1 = 全部
+  function setGroup(gi) {
+    activeGi = gi;
+    if (tags) Array.prototype.forEach.call(tags.children, (t, i) => t.classList.toggle('on', i - 1 === gi));
+    groups.forEach((el, i) => { el.style.display = (gi === -1 || i === gi) ? '' : 'none'; });
+  }
+  if (tags) {
+    [['全部', -1]].concat(HUB.map((g, i) => [g.g, i])).forEach((pair) => {
+      const label = pair[0], gi = pair[1];
+      const d = document.createElement('div');
+      d.className = 'fhub-tag';
+      d.textContent = label;
+      d.addEventListener('click', () => {
+        if (input && input.value) { input.value = ''; applyFilter(); }
+        setGroup(gi);
+        empty.hidden = true;
+      });
+      tags.appendChild(d);
+    });
+  }
+  setGroup(-1);
 
   // ---- 搜索：命中名称/描述/关键词时只显示命中的行与所在组 ----
   const input = document.getElementById('fhub-search');
@@ -146,11 +180,14 @@
   function applyFilter() {
     const q = norm(input.value);
     if (!q) {
-      groups.forEach(el => { el.style.display = ''; });
+      // 清空 → 恢复顶部分类切换（setGroup 复显当前分类并复位行显隐）
       Array.prototype.forEach.call(body.querySelectorAll('.set-row'), r => { r.style.display = ''; });
       empty.hidden = true;
+      setGroup(activeGi);
       return;
     }
+    // 搜索命中名称/描述/关键词：全局范围内过滤（忽略当前分类），顶部分类高亮回到「全部」
+    if (tags) Array.prototype.forEach.call(tags.children, (t, i) => t.classList.toggle('on', i === 0));
     let hits = 0;
     HUB.forEach((grp, gi) => {
       let gHit = 0;
