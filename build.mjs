@@ -928,7 +928,11 @@ const FIX_SENTINELS = [
   // ==== 2026-09-11 #298 词典拼字（语录抽句+词典切词逐词连发；数据=DEFAULT_CARD_DATA.dict「词典」分类，设置=回复设置「词典拼字」组）====
   { name: '#298 词典拼字抽句门·qs-en/qs-prob/qs-cc 三键生效（删则开关概率失效，拼字永不触发）', file: 'js/quote-spell.js', needle: "if (!c || c['qs-en'] !== 1) return null;" },
   { name: '#298 词典拼字接线·replyOnce 抽句门+逐词连发（删则开关存在但永不生效）', file: 'js/chat.js', needle: '(window.quoteSpellPick && window.quoteSpellPick(c))' },
-  { name: '#301 词典自建词条并入词典分类（删则自建语录/词不再进词典 tab 与拼字引擎）', file: 'js/default-cards.js', needle: "base.find(g => g[0] === '词库·自建')" },
+  // ==== 2026-09-11 #310 词典拼字单气泡形态 + 普通字卡截断修复（qs-one 50% 混合单气泡/逐词；qs-cc 默认关防普通字卡被抽去拼字）====
+  { name: '#310 单气泡拼字形态·chat.js 空格连卡+「词典拼字」tag（删则 qs-one 开了也只有逐词连发、无单气泡形态）', file: 'js/chat.js', needle: "if (rep.spell && rep.spellOne) {\nm = addIn(rep.spell.join(' '), {" },
+  { name: '#310 单气泡拼字掷币·quoteSpellPick 返回 {segs,one}（删则永远纯数组＝单气泡永不出现）', file: 'js/quote-spell.js', needle: "if (c['qs-one'] === 1 && Math.random() < 0.5) return { segs: segs, one: true };" },
+  { name: '#310 qs-cc 旧默认 1→0 迁移（删则存量桌面普通字卡继续被抽去拼字截断＝用户报障回流）', file: 'js/reply-settings.js', needle: "s.set('reply-qs-cc', '0'); changed = true; }" },
+  { name: '#301 词典自建词条并入词典分类（删则自建语录/词不再进词典 tab 与拼字引擎）', file: 'js/default-cards.js', needle: "const gw = base.find(g => g[0].indexOf('词库') === 0)" },
   // ==== 2026-09-11 #306 小游戏 UI 收口（连连看/消消乐棋盘 gap 溢出截断、头部标题被挤竖排、拍卖会「不拍了」白字白底隐形）+ 全部小游戏通用全屏 .game-fs ====
   { name: '#306 连连看 fitBoard 扣除 grid gap 再取整（删则牌面总宽多出 (cols-1)*3px 溢出右缘、最右列被截断）', file: 'js/linkup.js', needle: 'Math.floor((w - (st.cols - 1) * GAP) / st.cols)' },
   { name: '#306 消消乐 fitBoard 扣除 grid gap 再取整（同连连看，删则第 8 列被裁）', file: 'js/match3.js', needle: 'Math.floor((w - (N - 1) * GAP) / N)' },
@@ -938,10 +942,14 @@ const FIX_SENTINELS = [
   { name: '#306 全屏切换接线·面板 toggle game-fs + 图标 ⛶/⤢（gomoku 代表登记，删则按钮点了没反应）', file: 'js/gomoku.js', needle: "panel.classList.toggle('game-fs', isFs)" },
   // ==== 2026-09-11 #309 连连看/消消乐未开局舞台最小高度（空棋盘 stage 高 0 → 「开始对局」覆盖层压成一条横线＝用户报「面板只有一条横线、打不开」）====
   { name: '#309 连连看未开局舞台 min-height（删则空棋盘高度 0，开始覆盖层压成横线、面板无法正常开局；消消乐同行同款）', file: 'css/chat-pages.css', needle: '.lk-stage { position:relative; width:100%; min-height:190px;' },
+  // ==== 2026-09-11 #310 收藏批量管理多选失效（getFav() 每次 JSON.parse 生成全新对象，favBatchSel 存对象引用 → 任何 renderFav 重渲染（点全选/切分类/切页签）后引用全部失配，勾选静默清零＝多选/全选形同虚设；全机型通用）====
+  { name: '#310 收藏批量勾选身份=favItemKey 指纹（删则退回对象引用勾选，重渲染后勾选清零、多选失效；行为断言 tools/verify-fav-batch.mjs）', file: 'js/chat.js', needle: 'const visKeys = new Set(list2.map(favItemKey));' },
   // ==== 2026-09-11 #308 游乐室半框 × 关不掉（arcade.js 取了 #arc-close 却从未绑 click，任何机型都关不掉）====
   { name: '#308 游乐室 × 点击关闭接线（删则 #arc-close 成摆设、半框关不掉，行为断言 tools/verify-arcade-close.mjs）', file: 'js/arcade.js', needle: "closeBtn.addEventListener('click', (e) => { e.stopPropagation(); closePanel(); });" },
   // ==== 2026-09-11 #301 手机端整页 UI 错乱收口（红包注释漏 `-->` 吞标签 → .phone 提前闭合 → tabbar 落 body 层被 flex 居中挤出屏）====
   { name: '#301 红包注释正确闭合（删则注释吞掉「红包」标题+set-group 开标签，后续 </div> 连锁提前闭合设置页与 .phone 手机壳＝整页 UI 错乱、底部导航出屏）', file: 'template.html', needle: 'chat.js trySystemAutoSend 读 cs-rp-auto-prob -->' },
+  // ==== 2026-09-11 #313 心意集市「TA 送我礼物」总开关（默认关=禁止联系人送礼物；关闭时心愿单兑现 ① 与随机送礼 ④ 都不触发，TA 自己买 ②/加心愿 ③ 不受限）====
+  { name: '#313 gift-shop TA送我礼物总开关（删则禁送失效、TA 恢复买我心愿单礼物；giftInOn 默认 0=禁止）', file: 'js/gift-shop.js', needle: 'st.wlOn && st.giftInOn && !capped' },
 ];
 try {
   const built = CHECK_SENTINELS ? '' : readFileSync(join(root, 'index.html'), 'utf8');

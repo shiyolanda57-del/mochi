@@ -103,10 +103,15 @@
       const qs = dictCustRead(DICT_CUST_QKEY);
       const ws = dictCustRead(DICT_CUST_WKEY);
       const base = PRESET_DICT.map(g => [g[0], g[1].slice()]);
+      // v3.33.x：取消独立「词库·自建」分组（用户要求删掉）——自建词并入内置「词库」组
+      //（组名仍以「词库」开头，切词词典消费不受影响）；「自建」徽标仍由 __dictCustomSet 标注。
+      // 语录/词库兜底组仅在有内容时才创建，避免空分组占位。
       const gq = base.find(g => g[0] === '语录');
-      if (gq) gq[1] = gq[1].concat(qs); else base.push(['语录·自建', qs.slice()]);
-      const gw = base.find(g => g[0] === '词库·自建');
-      if (gw) gw[1] = gw[1].concat(ws); else base.push(['词库·自建', ws.slice()]);
+      if (gq) gq[1] = gq[1].concat(qs);
+      else if (qs.length) base.push(['语录·自建', qs.slice()]);
+      const gw = base.find(g => g[0].indexOf('词库') === 0);
+      if (gw) gw[1] = gw[1].concat(ws);
+      else if (ws.length) base.push(['词库·自建', ws.slice()]);
       DATA.dict = base;
       window.__dictCustomSet = new Set(qs.concat(ws));
     } catch (e) {}

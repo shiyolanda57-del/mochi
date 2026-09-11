@@ -10,6 +10,9 @@
 //   qs-en   总开关（1=开）
 //   qs-prob 拼字概率（%，每条回复掷一次；0=不触发）
 //   qs-cc   混用自定义字卡（1=字卡池+语录库合并抽句；0=只用词典语录）
+//   qs-one  单气泡拼字（v3.28.x #310：1=命中拼字后 50% 掷成「单气泡」形态——
+//           切出的词用空格连成一张字卡发进同一个聊天气泡、气泡下挂「词典拼字」tag；
+//           0=只走逐词连发多条；两种形态共用同一拼字概率混合触发）
 // 接线：chat.js replyOnce 在 genOneReply 之后调 window.quoteSpellPick(c)，命中则逐词连发，
 // 下游收藏/心情分享/情绪链/撤回等链路原样复用。
 (function () {
@@ -124,6 +127,8 @@
   // 暴露切词器（verify 脚本与排查用）
   window.quoteSpellSplit = splitWords;
   // 抽句门：c = replyCfg()。命中返回切段数组（2~7 段）；关闭/未命中/切不出返回 null（走原回复）。
+  // #310：qs-one 开时命中后 50% 掷成单气泡形态，返回 { segs, one: true }（one 缺省=false
+  // 即逐词连发；chat.js 两种返回形态都兼容），两种形态共用同一拼字概率混合触发。
   window.quoteSpellPick = function (c) {
     try {
       if (!c || c['qs-en'] !== 1) return null;
@@ -148,7 +153,11 @@
         const s = pool[Math.floor(Math.random() * pool.length)];
         if (s === lastQuote) continue;
         const segs = splitWords(s);
-        if (segs.length >= MIN_SEGS && segs.length <= MAX_SEGS) { lastQuote = s; return segs; }
+        if (segs.length >= MIN_SEGS && segs.length <= MAX_SEGS) {
+          lastQuote = s;
+          if (c['qs-one'] === 1 && Math.random() < 0.5) return { segs: segs, one: true };
+          return segs;
+        }
       }
       return null;
     } catch (e) { return null; }

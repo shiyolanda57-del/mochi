@@ -3708,13 +3708,32 @@ try { const _w = window.periodWarmText(rep.text); if (_w) rep.text = _w; } catch
 }
 // #298 词典拼字：开关开启时按「拼字概率」把本条回复换成「语录/字卡池抽句→词典切词→逐词连发」；
 // 未命中或切不出 2~7 段时照常单条回复，下游（收藏/心情分享/情绪链/撤回/统计）全链路复用
+// #310 单气泡拼字：quoteSpellPick 返回 {segs, one:true} 时改为「词间空格连成一张字卡、
+// 发进同一个聊天气泡」，气泡下挂「词典拼字」来源 tag（复用情绪 chip 链路，tagNoDup 不重复正文）；
+// 两种形态共用同一拼字概率混合触发（旧版返回纯数组仍走逐词连发）
 let spellSegs = null;
-try { spellSegs = (window.quoteSpellPick && window.quoteSpellPick(c)) || null; } catch (e) {}
+let spellOne = false;
+try {
+const _sp = (window.quoteSpellPick && window.quoteSpellPick(c)) || null;
+if (_sp && Array.isArray(_sp.segs)) { spellSegs = _sp.segs; spellOne = !!_sp.one; }
+else if (Array.isArray(_sp)) { spellSegs = _sp; }
+} catch (e) {}
 if (spellSegs && spellSegs.length > 1) {
-rep = { text: spellSegs.join(''), type: 'text', spell: spellSegs, parts: rep.parts || null };
+rep = { text: spellSegs.join(''), type: 'text', spell: spellSegs, spellOne: spellOne, parts: rep.parts || null };
 }
 let m = null;
-if (rep.spell) {
+if (rep.spell && rep.spellOne) {
+m = addIn(rep.spell.join(' '), {
+quote: quote,
+qside: 'out',
+qidx: quote ? quoteIdx : undefined,
+type: 'text',
+parts: rep.parts,
+silent: silent,
+tag: '词典拼字',
+tagNoDup: true
+});
+} else if (rep.spell) {
 for (let si = 0; si < rep.spell.length; si++) {
 if (si) {
 showTyping();
@@ -6627,6 +6646,15 @@ let activeSide = 'in';    // 当前操作消息方向
 let lastQuote = null;     // 待引用内容
 function getFav() { try { return JSON.parse(store.get('fav-msgs') || '[]'); } catch (e) { return []; } }
 function saveFav(list) { store.set('fav-msgs', JSON.stringify(list)); try { scheduleFavImgPass(2500); } catch (e) {} }
+// v3.31.x #310 批量管理勾选身份：收藏无稳定 id，用「归属+类型+内容+时间戳」指纹做 key
+// （与 favDup 判重同源）——getFav() 每次返回新解析的全新对象，按对象引用勾选会在
+// renderFav 重渲染（点全选/切分类/切页签都触发）后全部失配，勾选静默清零＝多选失效
+//（全机型复现，与设备无关）。key 里不含大载荷（text/parts 截断），只作会话内身份比对。
+function favItemKey(f) {
+  return (f.by || 'me') + '|' + (f.kind || 'msg') + '|' + (f.ts || 0) + '|' +
+    String(f.q || '').slice(0, 120) + '|' + String(f.text || '').slice(0, 120) + '|' +
+    (f.special || '') + '|' + (f.mailType || '') + '|' + ((f.side === 'out') ? 'o' : 'i');
+}
 // ===== v3.26.x #139：收藏图片压缩 =====
 // 收藏把消息 parts / 图片 dataURL 原样整份进库，与聊天记录重复存同一批图（诊断实证
 // fav-msgs 全桌面 ≈21MB）。压缩走「读-压缩-写前 CAS 比对」：压缩期间任何其他写入
@@ -7125,7 +7153,7 @@ const favList = document.getElementById('fav-list');
 let favTab = 'mine'; // mine=我的收藏 ta=联系人的收藏
 let favKind = 'all'; // 收藏分类筛选：all=全部 msg=聊天消息 card=互动卡片 mail=信件 feed=朋友圈
 let favBatch = false;   // v3.31.x 批量管理模式（多选删除）
-let favBatchSel = [];   // 批量模式选中的收藏对象引用（与当次渲染的数组同源，切 tab/分类后被收窄）
+let favBatchSel = [];   // #310 批量模式选中的 favItemKey 指纹（跨重渲染稳定，不再存对象引用）
 let favBatchArr = null; // 当次渲染使用的收藏数组引用（批量删除直接改它，避免重复 getFav 解析导致引用失效）
 let favBatchVis = [];   // 当前 tab+分类筛选下可见条目（全选用）
 const FAV_KINDS = [
@@ -7172,9 +7200,14 @@ if (cnt) cnt.textContent = n > 0 ? String(n) : '';
 const list2 = favKind === 'all' ? list : list.filter(f => (f.kind || 'msg') === favKind);
 list2.sort((a, b) => (b.ts || 0) - (a.ts || 0));
 // v3.31.x 批量管理：记录本次渲染的数组与可见条目；勾选只保留当前筛选下仍可见的（切 tab/分类自动收窄）
+// #310：勾选身份是 favItemKey 指纹而非对象引用——getFav() 每次 JSON.parse 生成全新对象，
+// 按引用过滤在每次重渲染后必然全部失配（点全选/切分类/切页签即触发），勾选静默清零。
 favBatchArr = fav;
 favBatchVis = list2;
-if (favBatch) favBatchSel = favBatchSel.filter(s => list2.indexOf(s) >= 0);
+if (favBatch) {
+  const visKeys = new Set(list2.map(favItemKey));
+  favBatchSel = favBatchSel.filter(k => visKeys.has(k));
+}
 const manageBtn = document.getElementById('fav-manage-btn');
 if (manageBtn) manageBtn.classList.toggle('sel', favBatch);
 const barEl = document.getElementById('fav-batch-bar');
@@ -7309,15 +7342,16 @@ return (x.kind || 'msg') === kind &&
 // v3.31.x 批量管理：条目变多选——外侧加圆圈勾选，点击整条切换勾选；
 // 用捕获阶段监听，抢先于气泡内图片的 click（查看大图）并 stopPropagation 拦下
 if (favBatch) {
+const fk = favItemKey(f); // #310 勾选身份=指纹 key（对象引用跨重渲染必失配）
 const ck = document.createElement('div');
-ck.className = 'fav-check' + (favBatchSel.indexOf(f) >= 0 ? ' on' : '');
+ck.className = 'fav-check' + (favBatchSel.indexOf(fk) >= 0 ? ' on' : '');
 ck.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg>';
 if (f.side === 'out') m.appendChild(ck); else m.insertBefore(ck, m.firstChild);
 m.addEventListener('click', (e) => {
 e.stopPropagation();
-const i = favBatchSel.indexOf(f);
-if (i >= 0) favBatchSel.splice(i, 1); else favBatchSel.push(f);
-ck.classList.toggle('on', favBatchSel.indexOf(f) >= 0);
+const i = favBatchSel.indexOf(fk);
+if (i >= 0) favBatchSel.splice(i, 1); else favBatchSel.push(fk);
+ck.classList.toggle('on', favBatchSel.indexOf(fk) >= 0);
 syncBatchBar();
 }, true);
 favList.appendChild(m);
@@ -7399,7 +7433,7 @@ if (favBatchAll) {
 favBatchAll.addEventListener('click', () => {
 if (!favBatch) return;
 const all = favBatchVis.length && favBatchSel.length === favBatchVis.length;
-favBatchSel = all ? [] : favBatchVis.slice();
+favBatchSel = all ? [] : favBatchVis.map(favItemKey); // #310 存指纹 key，不存对象引用
 renderFav();
 });
 }
@@ -7410,7 +7444,13 @@ if (!favBatch || !favBatchSel.length) return;
 const n = favBatchSel.length;
 if (!window.openModal) return;
 window.openModal('删除选中的 ' + n + ' 条收藏？', '', () => {
-favBatchSel.forEach(s => { const i = favBatchArr ? favBatchArr.indexOf(s) : -1; if (i >= 0) favBatchArr.splice(i, 1); });
+// #310 按指纹 key 匹配删除——对象引用在确认弹窗打开期间经 getFav 重排必然失配
+const selKeys = new Set(favBatchSel);
+if (favBatchArr) {
+for (let i = favBatchArr.length - 1; i >= 0; i--) {
+if (selKeys.has(favItemKey(favBatchArr[i]))) favBatchArr.splice(i, 1);
+}
+}
 if (favBatchArr) saveFav(favBatchArr);
 favBatchSel = [];
 renderFav();

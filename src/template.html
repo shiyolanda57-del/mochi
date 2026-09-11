@@ -40,6 +40,10 @@
         <div class="splash-title">mochi 摸鱼字卡</div>
         <!-- v3.8.y：署名（小红书）移到顶部，紧跟标题下方 -->
         <div class="splash-brand">小红书@言序（1842523578） · 抖音@言序（58334080131）</div>
+        <!-- 设计作者说明：设计与开发均由作者一个人独立完成，紧跟署名下方 -->
+        <div class="splash-source">
+          <div class="splash-source-line">设计与开发均由作者一个人独立完成。</div>
+        </div>
         <!-- v3.26.x：置顶澄清——很多人误会本站是 milk 二改/名字有关，特此置顶说明 -->
         <div class="splash-source">
           <div class="splash-source-line splash-clarify"><strong>「Mochi」这个名字与 milk 字卡没有关系，就是想取个简单的名字取的。</strong>本文因为有人公开二传本站链接，将其理解为新的 milk 二改字卡，故特此解释：本站不是 milk 字卡代码的二改版本，是从零开始独立编写的字卡传讯二创作品。</div>
@@ -56,6 +60,11 @@
       <!-- v3.8.x：开屏即公告1页——原「开屏公告 + 点进入后的报修确认层」两页合并为一页：
            全部说明直接展示在开屏上，点底部【点击进入】即进入（点击即视为已阅读知晓），无二次确认层 -->
       <div class="splash-notice" id="splash-notice">
+        <!-- 作者独立声明：最顶部固定展示——设计与开发均由作者一个人独立完成；静态 DOM，在线 notice.json 覆盖只改公告列表，不影响此处。编号用 'a'（非数字），避免与 clock.js 认定的 1/2/3('s'/bulletin) 冲突 -->
+        <div class="splash-alert" data-anti-scam="a">
+          <div class="splash-alert-t">原作者声明</div>
+          <p><strong>本网站的设计与开发均由作者一个人独立完成。</strong>代码从零编写、功能设计与 UI 均为本人亲手实现，无团队、无外包。二次修改须保留署名并注明原作者。</p>
+        </div>
         <!-- v3.27.x：防骗置顶声明——最顶部固定展示，防收费诈骗；静态 DOM，在线 notice.json 覆盖只改公告列表，不影响此处 -->
         <div class="splash-alert" data-anti-scam="1">
           <div class="splash-alert-t">防骗提醒</div>
@@ -2264,7 +2273,8 @@
             <div class="gs-row"><span>词典拼字</span><label class="toggle"><input type="checkbox" id="qs-en"><span class="tk"></span></label></div>
             <div class="gs-row"><span>拼字概率</span><div class="stepper" data-k="qs-prob" data-min="0" data-max="100" data-step="5"><button class="stp-min">−</button><input class="stp-val" id="qs-prob-val" readonly><button class="stp-max">+</button></div></div>
             <div class="gs-row"><span>混用自定义字卡</span><label class="toggle"><input type="checkbox" id="qs-cc"><span class="tk"></span></label></div>
-            <div class="gs-sub">开启后联系人回复按「拼字概率」随机变成拼字：从语录词库（系统预设字卡→词典，可逐张关闭）抽一句，按内置词典切成词逐条连发；开启「混用自定义字卡」时你的字卡库文本也会进抽句池，关闭则只用词典语录。概率 0 = 不触发</div>
+            <div class="gs-row"><span>单气泡拼字</span><label class="toggle"><input type="checkbox" id="qs-one"><span class="tk"></span></label></div>
+            <div class="gs-sub">开启后联系人回复按「拼字概率」随机变成拼字：从语录词库（系统预设字卡→词典，可逐张关闭）抽一句，按内置词典切成词逐条连发；开启「单气泡拼字」时命中拼字有一半概率变成单气泡形态——词间空格连成一张字卡发进同一个气泡，气泡下带「词典拼字」小标签，两种形态混合出现；开启「混用自定义字卡」时你的字卡库文本也会进抽句池（可能把你的普通字卡抽去拼字，默认关），关闭则只用词典语录。概率 0 = 不触发</div>
           </div>
           <div class="gs-title">主动发送（联系人找你）</div>
           <div class="set-group glass">

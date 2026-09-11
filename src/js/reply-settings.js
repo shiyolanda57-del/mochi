@@ -16,7 +16,10 @@
     // v3.28.x #298：词典拼字——qs-en 总开关、qs-prob 拼字概率（%）、qs-cc 混用自定义字卡
     //（1=字卡池+词典语录合并抽句；0=只用词典语录）。逻辑与词库数据见 quote-spell.js +
     // default-cards-data.js「词典」分类；chat.js replyOnce 消费
-    'qs-en': 1, 'qs-prob': 25, 'qs-cc': 1,
+    // v3.28.x #310：qs-cc 默认改 0——用户反馈普通字卡回复被抽去拼字截断，混用池改默认关闭
+    //（存量已写盘的旧值 1 由文件尾 migrateQsCcOld 一次性迁移为 0，只动从未自改过的默认值）；
+    // qs-one 单气泡拼字（默认开）：命中拼字后 50% 掷成单气泡形态（词间空格一张卡+「词典拼字」tag）
+    'qs-en': 1, 'qs-prob': 25, 'qs-cc': 0, 'qs-one': 1,
     // v3.6.x：主动发送默认概率 10% 太低（每 5~10 分钟才掷一次），
     // 默认设置下第一条主动消息平均要约 75 分钟才来，用户会以为 TA 从不主动发消息；
     // 提到 30%（与信箱写信概率默认一致），平均约 25 分钟一条
@@ -196,7 +199,7 @@
       }
     });
     // 开关
-    ['py-en', 'as-en', 'dnd-en', 'as-badge', 'ml-kaomoji-en', 'ml-emoji-en', 'ml-sticker-en', 'cs-normal', 'cs-trigger-name', 'cs-trigger-bar', 'gc-py-en', 'ai-rps-en', 'ai-game-en', 'ai-cuddle-en', 'ai-cc-en', 'ckq-en', 'call-resume', 'call-no-hangup', 'ml-write-en', 'fd-post-en', 'qs-en', 'qs-cc'].forEach(k => {
+    ['py-en', 'as-en', 'dnd-en', 'as-badge', 'ml-kaomoji-en', 'ml-emoji-en', 'ml-sticker-en', 'cs-normal', 'cs-trigger-name', 'cs-trigger-bar', 'gc-py-en', 'ai-rps-en', 'ai-game-en', 'ai-cuddle-en', 'ai-cc-en', 'ckq-en', 'call-resume', 'call-no-hangup', 'ml-write-en', 'fd-post-en', 'qs-en', 'qs-cc', 'qs-one'].forEach(k => {
       const el = document.getElementById(k);
       if (el) el.checked = cfg[k] === 1;
     });
@@ -296,7 +299,7 @@
     });
   });
   // 开关交互
-  ['py-en', 'as-en', 'dnd-en', 'as-badge', 'ml-kaomoji-en', 'ml-emoji-en', 'ml-sticker-en', 'cs-normal', 'cs-trigger-name', 'cs-trigger-bar', 'gc-py-en', 'ai-rps-en', 'ai-game-en', 'ai-cuddle-en', 'ai-cc-en', 'ckq-en', 'call-resume', 'call-no-hangup', 'ml-write-en', 'fd-post-en', 'qs-en', 'qs-cc'].forEach(k => {
+  ['py-en', 'as-en', 'dnd-en', 'as-badge', 'ml-kaomoji-en', 'ml-emoji-en', 'ml-sticker-en', 'cs-normal', 'cs-trigger-name', 'cs-trigger-bar', 'gc-py-en', 'ai-rps-en', 'ai-game-en', 'ai-cuddle-en', 'ai-cc-en', 'ckq-en', 'call-resume', 'call-no-hangup', 'ml-write-en', 'fd-post-en', 'qs-en', 'qs-cc', 'qs-one'].forEach(k => {
     const el = document.getElementById(k);
     if (el) {
       el.addEventListener('change', () => {
@@ -348,7 +351,7 @@
           window.saveReplyCfg(k, v);
         }
       });
-      ['py-en', 'as-en', 'dnd-en', 'as-badge', 'ml-kaomoji-en', 'ml-emoji-en', 'ml-sticker-en', 'cs-normal', 'cs-trigger-name', 'cs-trigger-bar', 'gc-py-en', 'ai-rps-en', 'ai-game-en', 'ai-cuddle-en', 'ai-cc-en', 'ckq-en', 'call-resume', 'call-no-hangup', 'ml-write-en', 'fd-post-en', 'qs-en', 'qs-cc'].forEach(k => {
+      ['py-en', 'as-en', 'dnd-en', 'as-badge', 'ml-kaomoji-en', 'ml-emoji-en', 'ml-sticker-en', 'cs-normal', 'cs-trigger-name', 'cs-trigger-bar', 'gc-py-en', 'ai-rps-en', 'ai-game-en', 'ai-cuddle-en', 'ai-cc-en', 'ckq-en', 'call-resume', 'call-no-hangup', 'ml-write-en', 'fd-post-en', 'qs-en', 'qs-cc', 'qs-one'].forEach(k => {
         const el = document.getElementById(k);
         if (el) window.saveReplyCfg(k, el.checked ? 1 : 0);
       });
@@ -498,6 +501,32 @@
     } catch (e) {}
   }
   migrateMailMaxOld();
+  // v3.28.x #310：词典拼字「混用自定义字卡」旧默认 1 → 0 的旧值迁移——用户反馈普通字卡
+  // 回复被抽去拼字截断发成多条，该键上线时默认 1 已随 #298 写进存量桌面存储；这里扫描
+  // 全部桌面联系人，仍为 1（从未自改过）的一律改写为 0（只用词典语录抽句）。自改开启
+  // 写的也是 1、与迁移值无法区分，故只跑一次：迁移完成写 reply-qs-cc-migrated 标记，
+  // 之后用户再自行开启不再被纠正。
+  function migrateQsCcOld() {
+    try {
+      if (!window.getContacts || !window.storeFor) return;
+      const cids = [window.__activeCid || 'default'];
+      (window.getContacts() || []).forEach(c => { if (c.id && cids.indexOf(c.id) === -1) cids.push(c.id); });
+      let changed = false;
+      cids.forEach(cid => {
+        try {
+          const s = window.storeFor(cid);
+          if (!s) return;
+          if (String(s.get('reply-qs-cc-migrated')) === '1') return;
+          if (String(s.get('reply-qs-cc')) === '1') { s.set('reply-qs-cc', '0'); changed = true; }
+          s.set('reply-qs-cc-migrated', '1');
+        } catch (e) {}
+      });
+      if (changed) {
+        try { if (window.console && console.log) console.log('[reply-settings] 已迁移词典拼字混用自定义字卡旧默认 1→0'); } catch (e) {}
+      }
+    } catch (e) {}
+  }
+  migrateQsCcOld();
 
   // ===== v3.27.x #218：互动频率引导提示（纯提醒，不改任何默认值） =====
   // 背景：系统设置默认全开（设计如此，见开屏公告第八章），但总有用户觉得「概率太高」；
